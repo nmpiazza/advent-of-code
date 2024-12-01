@@ -10,7 +10,7 @@ fn read_lines(filename: &str) -> Vec<String> {
         .collect()
 }
 
-fn main() {
+fn naive() {
     let lines: Vec<String> = read_lines(INPUT_FILENAME);
 
     let mut left: Vec<String> = vec![];
@@ -36,4 +36,34 @@ fn main() {
         sum = sum + val;
     }
     println!("{}", sum)
+}
+
+fn clean() {
+    let lines: Vec<String> = read_lines(INPUT_FILENAME);
+
+    let (mut left, mut right): (Vec<String>, Vec<String>) = lines
+        .into_iter()
+        .map(|line| {
+            let parts: Vec<String> = line.split_whitespace().map(String::from).collect();
+            (parts[0].to_string(), parts[1].to_string())
+        })
+        .unzip();
+
+    left.sort();
+    right.sort();
+
+    let sum: i32 = left
+        .iter()
+        .zip(right.iter())
+        .map(|(l, r)| {
+            (l.to_string().parse::<i32>().unwrap() - r.to_string().parse::<i32>().unwrap()).abs()
+        })
+        .sum();
+
+    println!("{}", sum);
+}
+
+fn main() {
+    //naive();
+    clean();
 }
