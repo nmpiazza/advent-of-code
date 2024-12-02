@@ -10,6 +10,7 @@ fn read_lines(filename: &str) -> Vec<String> {
         .collect()
 }
 
+#[allow(dead_code)]
 fn naive() {
     let lines: Vec<String> = read_lines(INPUT_FILENAME);
 
