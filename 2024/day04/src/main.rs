@@ -1,6 +1,3 @@
-use std::char::ParseCharError;
-use std::{error::Error, fs::read_to_string};
-
 const PART_1_TEST_INPUT: &str = "MMMSXXMASM
 MSAMXMSMSA
 AMXSXMAAMM
@@ -43,6 +40,7 @@ MXMXAXMASX";
 //    }
 //}
 
+#[derive(Debug)]
 struct Solution {
     solution: Vec<char>,
     reversible: bool,
@@ -62,27 +60,27 @@ impl Solution {
 }
 
 struct Directions {
-    North: bool,
-    South: bool,
-    East: bool,
-    West: bool,
-    NorthEast: bool,
-    SouthEast: bool,
-    SouthWest: bool,
-    NorthWest: bool,
+    north: bool,
+    south: bool,
+    east: bool,
+    west: bool,
+    north_east: bool,
+    south_east: bool,
+    south_west: bool,
+    north_west: bool,
 }
 
 impl Directions {
     fn new() -> Directions {
         Directions {
-            North: true,
-            South: true,
-            East: true,
-            West: true,
-            NorthEast: true,
-            SouthEast: true,
-            SouthWest: true,
-            NorthWest: true,
+            north: true,
+            south: true,
+            east: true,
+            west: true,
+            north_east: true,
+            south_east: true,
+            south_west: true,
+            north_west: true,
         }
     }
 }
@@ -127,10 +125,12 @@ fn direction(point: &Point, magnitude: usize, x_step: i32, y_step: i32) -> Vec<P
     points
 }
 
+#[derive(Debug)]
 enum CrosswordError {
     NoMatch,
 }
 
+#[derive(Debug)]
 struct Crossword {
     board: Vec<Vec<char>>,
     solutions: Vec<Solution>,
@@ -152,69 +152,80 @@ impl Crossword {
     fn check_solution(
         &self,
         position: Point,
-        solution: Solution,
-    ) -> Result<Vec<Vec<Point>>, CrosswordError> {
+        solution: &Solution,
+    ) -> Result<Vec<Match>, CrosswordError> {
         let mut directions: Directions = Directions::new();
         // Bounds check in cardinal directions
         if position.X - solution.solution.len() < 0 {
-            directions.West = false;
+            directions.west = false;
         } else if position.X + solution.solution.len() > self.board[0].len() {
-            directions.East = false;
+            directions.east = false;
         } else if position.Y - solution.solution.len() < 0 {
-            directions.North = false;
+            directions.north = false;
         } else if position.Y + solution.solution.len() > self.board.len() {
-            directions.South = false;
+            directions.south = false;
         }
 
         // AND cardinals to get the intercardinal directions
-        directions.NorthEast = directions.North && directions.East;
-        directions.SouthEast = directions.South && directions.East;
-        directions.NorthEast = directions.North && directions.East;
-        directions.SouthEast = directions.South && directions.East;
+        directions.north_east = directions.north && directions.east;
+        directions.south_east = directions.south && directions.east;
+        directions.north_east = directions.north && directions.east;
+        directions.south_east = directions.south && directions.east;
 
         let mut extraction_candidates: Vec<Vec<Point>> = vec![];
 
         // TODO
-        if directions.North {
+        if directions.north {
             extraction_candidates.push(direction(&position, solution.solution.len(), 0, -1))
         }
-        if directions.South {
+        if directions.south {
             extraction_candidates.push(direction(&position, solution.solution.len(), 0, 1))
         }
-        if directions.East {
+        if directions.east {
             extraction_candidates.push(direction(&position, solution.solution.len(), 1, 0))
         }
-        if directions.West {
+        if directions.west {
             extraction_candidates.push(direction(&position, solution.solution.len(), -1, 0))
         }
-        if directions.NorthEast {
+        if directions.north_east {
             extraction_candidates.push(direction(&position, solution.solution.len(), 1, -1))
         }
-        if directions.SouthEast {
+        if directions.south_east {
             extraction_candidates.push(direction(&position, solution.solution.len(), 1, 1))
         }
-        if directions.SouthWest {
+        if directions.south_west {
             extraction_candidates.push(direction(&position, solution.solution.len(), -1, 1))
         }
-        if directions.NorthWest {
+        if directions.north_west {
             extraction_candidates.push(direction(&position, solution.solution.len(), -1, -1))
         }
 
-        if extraction_candidates.len() == 0 {
-            return Err(CrosswordError::NoMatch);
+        let successful_matches: Vec<Match> = vec![];
+
+        if successful_matches.is_empty() {
+            Err(CrosswordError::NoMatch)
         } else {
-            return Ok(extraction_candidates);
+            Ok(successful_matches)
         }
     }
 
     fn extract(points: Vec<Point>) -> Match {
         todo!()
     }
+
     fn solve(&self) -> Vec<Match> {
-        // for solution in self.solutions
-        //
-        todo!()
+        let mut matches: Vec<Match> = vec![];
+        for x in 0..self.board[0].len() {
+            for y in 0..self.board.len() {
+                for solution in &self.solutions {
+                    matches.extend(self.check_solution(Point { X: x, Y: y }, solution).unwrap());
+                }
+            }
+        }
+
+        matches
     }
+
     fn add_solution(&mut self, solution: Solution) {
         self.solutions.push(solution);
     }
@@ -228,10 +239,9 @@ fn part1_main(input: &str) -> i32 {
         solution: "XMAS".chars().collect(),
         reversible: true,
     });
+    dbg!(crossword);
     // Solve
-    todo!();
     // Count solutions
-    todo!();
     0
 }
 
