@@ -149,20 +149,18 @@ impl Crossword {
         }
     }
 
-    fn check_solution(
-        &self,
-        position: Point,
-        solution: &Solution,
-    ) -> Result<Vec<Match>, CrosswordError> {
+    fn check_solution(&self, position: Point, solution: &Solution) -> Vec<Match> {
         let mut directions: Directions = Directions::new();
         // Bounds check in cardinal directions
-        if position.X - solution.solution.len() < 0 {
+        if (position.X as i32) - (solution.solution.len() as i32) < 0 {
             directions.west = false;
-        } else if position.X + solution.solution.len() > self.board[0].len() {
+        } else if (position.X as i32) + (solution.solution.len() as i32)
+            > self.board[0].len() as i32
+        {
             directions.east = false;
-        } else if position.Y - solution.solution.len() < 0 {
+        } else if (position.Y as i32) - (solution.solution.len() as i32) < 0 {
             directions.north = false;
-        } else if position.Y + solution.solution.len() > self.board.len() {
+        } else if (position.Y as i32) + (solution.solution.len() as i32) > self.board.len() as i32 {
             directions.south = false;
         }
 
@@ -202,11 +200,19 @@ impl Crossword {
 
         let successful_matches: Vec<Match> = vec![];
 
+        for candidate in extraction_candidates {
+            // TODO implement matches logic with extract and solution.matches()
+            todo!("Implement matches logic with extract and solution.matches()");
+        }
+        /*
         if successful_matches.is_empty() {
             Err(CrosswordError::NoMatch)
         } else {
             Ok(successful_matches)
         }
+        */
+        // NOTE Changing this to just return a Vec since I'm just extending the result anyway
+        successful_matches
     }
 
     fn extract(points: Vec<Point>) -> Match {
@@ -218,7 +224,7 @@ impl Crossword {
         for x in 0..self.board[0].len() {
             for y in 0..self.board.len() {
                 for solution in &self.solutions {
-                    matches.extend(self.check_solution(Point { X: x, Y: y }, solution).unwrap());
+                    matches.extend(self.check_solution(Point { X: x, Y: y }, solution));
                 }
             }
         }
@@ -231,7 +237,7 @@ impl Crossword {
     }
 }
 
-fn part1_main(input: &str) -> i32 {
+fn part1_main(input: &str) -> usize {
     // Parse input to Crossword board struct
     let mut crossword: Crossword = Crossword::new(input);
     // Add Solutions to board struct
@@ -239,10 +245,11 @@ fn part1_main(input: &str) -> i32 {
         solution: "XMAS".chars().collect(),
         reversible: true,
     });
-    dbg!(crossword);
+    //dbg!(&crossword);
     // Solve
+    crossword.solve().len()
     // Count solutions
-    0
+    //0
 }
 
 fn main() {
