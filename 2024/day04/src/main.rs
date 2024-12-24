@@ -1,5 +1,5 @@
 use core::fmt;
-use std::fs::read_to_string;
+use std::{error::Error, fs::read_to_string};
 
 const PART_1_TEST_INPUT: &str = "MMMSXXMASM
 MSAMXMSMSA
@@ -121,7 +121,7 @@ fn dir_check(
     Ok(path)
 }
 
-fn dead_simple_part_1_main(input: &str) -> usize {
+fn part_1_main(input: &str) -> usize {
     let mut matches: Vec<Vec<Point>> = vec![];
     let mut board: Vec<Vec<char>> = vec![];
 
@@ -156,12 +156,56 @@ fn dead_simple_part_1_main(input: &str) -> usize {
 
     matches.len()
 }
+
+fn part_2_check(board: &Vec<Vec<char>>, x: i32, y: i32) -> Result<Vec<Point>, DirCheckError> {
+    let mut path: Vec<Point> = vec![];
+
+    if x - 1 < 0 || y - 1 < 0 || x + 1 >= board[0].len() as i32 || y + 1 >= board.len() as i32 {
+        return Err(DirCheckError::MatchError);
+    }
+
+    let nw: char = board[y as usize - 1][x as usize - 1];
+    let ne: char = board[y as usize - 1][x as usize + 1];
+    let se: char = board[y as usize + 1][x as usize + 1];
+    let sw: char = board[y as usize + 1][x as usize - 1];
+
+    if ((nw == 'M' && se == 'S') || (nw == 'S' && se == 'M'))
+        && ((ne == 'M' && sw == 'S') || (ne == 'S' && sw == 'M'))
+    {
+        path.push(Point { x: x, y: y })
+    }
+
+    Ok(path)
+}
+fn part_2_main(input: &str) -> usize {
+    let mut matches: Vec<Vec<Point>> = vec![];
+    let mut board: Vec<Vec<char>> = vec![];
+
+    for line in input.lines() {
+        board.push(line.chars().collect());
+    }
+
+    for y in 0..board.len() {
+        for x in 0..board[0].len() {
+            if board[y][x] == 'A' {
+                if let Ok(path) = part_2_check(&board, x as i32, y as i32) {
+                    if !path.is_empty() {
+                        matches.push(path);
+                    }
+                }
+            }
+        }
+    }
+
+    matches.retain(|x| x.len() > 0);
+
+    matches.len()
+}
 fn main() {
-    println!(
-        "Part 1 Test: {}",
-        dead_simple_part_1_main(PART_1_TEST_INPUT)
-    );
+    println!("Part 1 Test: {}", part_1_main(PART_1_TEST_INPUT));
 
     let part_1_input: &str = &read_to_string("./src/input.txt").unwrap();
-    println!("Part 1: {}", dead_simple_part_1_main(part_1_input));
+    println!("Part 1: {}", part_1_main(part_1_input));
+    println!("Part 2 Test: {}", part_2_main(PART_1_TEST_INPUT));
+    println!("Part 2: {}", part_2_main(part_1_input));
 }
