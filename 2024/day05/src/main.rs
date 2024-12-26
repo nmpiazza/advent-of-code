@@ -56,7 +56,6 @@ impl Rule {
 #[allow(dead_code)]
 #[derive(Debug)]
 struct Update {
-    //pages: Map<usize, String>,
     pages: Vec<usize>,
     rules: Vec<Rule>,
     valid: bool,
@@ -76,6 +75,7 @@ impl Update {
             valid: false,
         };
         update.set_matching_rules(rules);
+        update.is_valid();
         // { pages: input .split(',') .map(|x| x.parse::<usize>().ok().unwrap()) .into_iter() .collect(), rules: vec![], };
 
         update
@@ -126,9 +126,7 @@ impl Update {
     }
 }
 
-fn parse_and_process(input: &str) -> (Vec<Rule>, Vec<Update>) {}
-#[allow(dead_code)]
-fn part_1_main(input: &str) -> Result<usize, AOCError> {
+fn parse_and_process(input: &str) -> (Vec<Rule>, Vec<Update>) {
     // split input sections to part 1 and part 2
     let mut raw_rules: Vec<&str> = vec![];
     let mut raw_updates: Vec<&str> = vec![];
@@ -145,35 +143,29 @@ fn part_1_main(input: &str) -> Result<usize, AOCError> {
             raw_rules.push(line)
         }
     }
-    //dbg!(&raw_rules);
-    //dbg!(&raw_updates);
 
-    // parse input section 1 to rules
     let rules: Vec<Rule> = raw_rules.iter().map(|x| Rule::new(x)).collect();
-    // parse input section 2 to updates
-    let mut updates: Vec<Update> = raw_updates.iter().map(|x| Update::new(x, &rules)).collect();
+    let updates: Vec<Update> = raw_updates.iter().map(|x| Update::new(x, &rules)).collect();
 
-    // dbg!(rules);
-    // check if each update is valid and denote valid v invalid
+    (rules, updates)
+}
+
+#[allow(dead_code)]
+fn part_1_main(input: &str) -> Result<usize, AOCError> {
+    let (rules, mut updates) = parse_and_process(input);
+
     let mut sum: usize = 0;
     for update in updates.iter_mut() {
-        if update.is_valid() {
+        if update.valid {
             let middle: usize = update.middle();
             //println!( "List: {:?}, Valid: {}, Middle: {}", update.pages, update.valid, middle);
             sum = sum + middle;
         }
     }
-    //dbg!(&updates);
-
-    //updates[0].is_valid();
-    //dbg!(&updates[0]);
-    // dbg!(updates);
-
-    // for each valid update, find middle page, sum
-    // return sum
 
     Ok(sum)
 }
+
 fn main() {
     println!("Part 1 Test: {}", part_1_main(PART_1_TEST).unwrap());
     println!(
