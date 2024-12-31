@@ -1,7 +1,7 @@
 use core::fmt;
 use std::error::Error;
 
-#[derive(PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd)]
 enum Tile {
     Obstruction,
     Traversible,
@@ -55,7 +55,12 @@ struct Board {
     guard_direction: GuardDirection,
 }
 
-#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+enum GuardProgress {
+    Complete,
+    Incomplete,
+}
+
 impl Board {
     fn guard_walk_forward(&mut self, p: Point) {
         self.tiles[p.y as usize][p.x as usize] = Tile::Traversed;
@@ -71,7 +76,7 @@ impl Board {
         }
     }
 
-    fn next_tile(&mut self) -> Option<Point> {
+    fn next_tile(&self) -> Option<Point> {
         let mut next: Point = self.guard_position.clone();
         // match guard_direction => return math
         match self.guard_direction {
@@ -90,9 +95,28 @@ impl Board {
         }
     }
 
-    fn guard_progress(&self) {
-        // if next tile out of bounds
-        todo!()
+    fn guard_progress(&mut self) -> GuardProgress {
+        let next_point: Point;
+        let next_tile: Tile;
+
+        match self.next_tile() {
+            None => return GuardProgress::Complete,
+            Some(next) => {
+                next_point = next;
+                next_tile = self.tiles[next_point.y as usize][next_point.x as usize].clone()
+            }
+        }
+
+        match next_tile {
+            Tile::Traversible | Tile::Traversed => {
+                self.guard_walk_forward(next_point);
+                GuardProgress::Incomplete
+            }
+            Tile::Obstruction => {
+                self.guard_rotate_clockwise();
+                GuardProgress::Incomplete
+            }
+        }
     }
 
     fn distinct_traversed_tiles(&self) -> usize {
@@ -102,6 +126,18 @@ impl Board {
             .filter(|&p| *p == Tile::Traversed)
             .count()
     }
+    fn new() -> Board {
+        todo!()
+    }
+}
+
+fn part_1_main(input: &str) -> Option<usize> {
+    let mut board: Board = Board::new();
+    let mut guard_progress: GuardProgress = GuardProgress::Incomplete;
+    while guard_progress != GuardProgress::Complete {
+        board.guard_progress();
+    }
+    Some(board.distinct_traversed_tiles())
 }
 fn main() {
     println!("Hello, world!");
