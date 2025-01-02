@@ -1,15 +1,33 @@
 use core::fmt;
-use std::error::Error;
+use std::{
+    error::Error,
+    fmt::{Display, Write},
+    thread,
+    time::Duration,
+};
 
-#[derive(Clone, PartialEq, PartialOrd)]
+const TEST_INPUT: &str = "....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...";
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 enum Tile {
     Obstruction,
     Traversible,
     Traversed,
-    //GuardDirectionUp,
-    //GuardDirectionRight,
-    //GuardDirectionDown,
-    //GuardDirectionLeft,
+    Invalid,
+    // Guard,
+    GuardDirectionUp,
+    GuardDirectionRight,
+    GuardDirectionDown,
+    GuardDirectionLeft,
 }
 
 impl fmt::Display for Tile {
@@ -18,14 +36,34 @@ impl fmt::Display for Tile {
             Tile::Obstruction => write!(f, "#"),
             Tile::Traversible => write!(f, "."),
             Tile::Traversed => write!(f, "#"),
-            //Tile::GuardDirectionUp => write!(f, "^"),
-            //Tile::GuardDirectionRight => write!(f, ">"),
-            //Tile::GuardDirectionDown => write!(f, "v"),
-            //Tile::GuardDirectionLeft => write!(f, "<"),
+            Tile::Invalid => write!(f, "$"),
+            Tile::GuardDirectionUp => write!(f, "^"),
+            Tile::GuardDirectionRight => write!(f, ">"),
+            Tile::GuardDirectionDown => write!(f, "v"),
+            Tile::GuardDirectionLeft => write!(f, "<"),
         }
     }
 }
 
+struct Tiles(Vec<Tile>);
+
+impl fmt::Display for Tiles {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.iter().for_each(|c| {
+            let _ = match c {
+                Tile::Obstruction => write!(f, "#"),
+                Tile::Traversible => write!(f, "."),
+                Tile::Traversed => write!(f, "#"),
+                Tile::Invalid => write!(f, "$"),
+                Tile::GuardDirectionUp => write!(f, "^"),
+                Tile::GuardDirectionRight => write!(f, ">"),
+                Tile::GuardDirectionDown => write!(f, "v"),
+                Tile::GuardDirectionLeft => write!(f, "<"),
+            };
+        });
+        write!(f, "\n")
+    }
+}
 enum GuardDirection {
     Up,
     Right,
@@ -49,6 +87,11 @@ struct Point {
     x: i32,
     y: i32,
 }
+
+#[derive(Debug)]
+enum BoardError {
+    FailedParse,
+}
 struct Board {
     tiles: Vec<Vec<Tile>>,
     guard_position: Point,
@@ -69,10 +112,26 @@ impl Board {
 
     fn guard_rotate_clockwise(&mut self) {
         match self.guard_direction {
-            GuardDirection::Up => self.guard_direction = GuardDirection::Right,
-            GuardDirection::Right => self.guard_direction = GuardDirection::Down,
-            GuardDirection::Down => self.guard_direction = GuardDirection::Left,
-            GuardDirection::Left => self.guard_direction = GuardDirection::Right,
+            GuardDirection::Up => {
+                self.guard_direction = GuardDirection::Right;
+                self.tiles[self.guard_position.y as usize][self.guard_position.x as usize] =
+                    Tile::GuardDirectionRight
+            }
+            GuardDirection::Right => {
+                self.guard_direction = GuardDirection::Down;
+                self.tiles[self.guard_position.y as usize][self.guard_position.x as usize] =
+                    Tile::GuardDirectionDown
+            }
+            GuardDirection::Down => {
+                self.guard_direction = GuardDirection::Left;
+                self.tiles[self.guard_position.y as usize][self.guard_position.x as usize] =
+                    Tile::GuardDirectionRight
+            }
+            GuardDirection::Left => {
+                self.guard_direction = GuardDirection::Right;
+                self.tiles[self.guard_position.y as usize][self.guard_position.x as usize] =
+                    Tile::GuardDirectionRight
+            }
         }
     }
 
@@ -116,6 +175,7 @@ impl Board {
                 self.guard_rotate_clockwise();
                 GuardProgress::Incomplete
             }
+            _ => todo!(),
         }
     }
 
@@ -126,19 +186,63 @@ impl Board {
             .filter(|&p| *p == Tile::Traversed)
             .count()
     }
-    fn new() -> Board {
-        todo!()
+
+    fn new(input: &str) -> Result<Board, BoardError> {
+        let tiles: Vec<Vec<Tile>> = input
+            .lines()
+            .map(|line| {
+                line.chars()
+                    .into_iter()
+                    .map(|c: char| match c {
+                        '.' => Tile::Traversible,
+                        '#' => Tile::Obstruction,
+                        '^' => Tile::GuardDirectionUp,
+                        '>' => Tile::GuardDirectionRight,
+                        'V' => Tile::GuardDirectionDown,
+                        '<' => Tile::GuardDirectionLeft,
+                        _ => Tile::Invalid,
+                    })
+                    .collect::<Vec<Tile>>()
+            })
+            .collect::<Vec<Vec<Tile>>>();
+
+        // dbg!(&tiles);
+        if tiles.iter().flatten().any(|&x| x == Tile::Invalid) {
+            return Err(BoardError::FailedParse);
+        }
+        Ok(Board {
+            tiles: tiles,
+            guard_position: Point { x: 0, y: 0 },
+            guard_direction: GuardDirection::Up,
+        })
+    }
+    // fn display_tiles(&self) {
+    //     self.tiles.iter().for_each(|x| println!("{:?}", x));
+    // }
+    fn display_tiles(&self, iteration: usize) {
+        println!("==========Tiles Iteration: {} ==========", iteration);
+        for row in &self.tiles {
+            for tile in row {
+                print!("{}", tile);
+            }
+            println!();
+        }
     }
 }
 
 fn part_1_main(input: &str) -> Option<usize> {
-    let mut board: Board = Board::new();
+    println!("{}", input);
+    let mut board: Board = Board::new(input).expect("board parsing");
     let mut guard_progress: GuardProgress = GuardProgress::Incomplete;
+    let mut iteration: usize = 0;
     while guard_progress != GuardProgress::Complete {
+        board.display_tiles(iteration);
         board.guard_progress();
+        thread::sleep(Duration::from_secs(1));
+        iteration += 1;
     }
     Some(board.distinct_traversed_tiles())
 }
 fn main() {
-    println!("Hello, world!");
+    println!("PART_1_TEST: {:?}", part_1_main(TEST_INPUT).unwrap());
 }
