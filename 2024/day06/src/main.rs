@@ -1,4 +1,5 @@
 use core::fmt;
+use std::fs::read_to_string;
 use std::{
     error::Error,
     fmt::{Display, Write},
@@ -35,7 +36,7 @@ impl fmt::Display for Tile {
         match self {
             Tile::Obstruction => write!(f, "#"),
             Tile::Traversible => write!(f, "."),
-            Tile::Traversed => write!(f, "#"),
+            Tile::Traversed => write!(f, "X"),
             Tile::Invalid => write!(f, "$"),
             Tile::GuardDirectionUp => write!(f, "^"),
             Tile::GuardDirectionRight => write!(f, ">"),
@@ -53,7 +54,7 @@ impl fmt::Display for Tiles {
             let _ = match c {
                 Tile::Obstruction => write!(f, "#"),
                 Tile::Traversible => write!(f, "."),
-                Tile::Traversed => write!(f, "#"),
+                Tile::Traversed => write!(f, "X"),
                 Tile::Invalid => write!(f, "$"),
                 Tile::GuardDirectionUp => write!(f, "^"),
                 Tile::GuardDirectionRight => write!(f, ">"),
@@ -61,7 +62,7 @@ impl fmt::Display for Tiles {
                 Tile::GuardDirectionLeft => write!(f, "<"),
             };
         });
-        write!(f, "\n")
+        writeln!(f)
     }
 }
 enum GuardDirection {
@@ -128,7 +129,7 @@ impl Board {
                     Tile::GuardDirectionRight
             }
             GuardDirection::Left => {
-                self.guard_direction = GuardDirection::Right;
+                self.guard_direction = GuardDirection::Up;
                 self.tiles[self.guard_position.y as usize][self.guard_position.x as usize] =
                     Tile::GuardDirectionRight
             }
@@ -146,7 +147,7 @@ impl Board {
         }
 
         if (next.x < 0 || next.y < 0)
-            || (next.x as usize > self.tiles[0].len() || next.y as usize > self.tiles.len())
+            || (next.x as usize >= self.tiles[0].len() || next.y as usize >= self.tiles.len())
         {
             None
         } else {
@@ -162,12 +163,17 @@ impl Board {
             None => return GuardProgress::Complete,
             Some(next) => {
                 next_point = next;
-                next_tile = self.tiles[next_point.y as usize][next_point.x as usize].clone()
+                next_tile = self.tiles[next_point.y as usize][next_point.x as usize]
             }
         }
 
         match next_tile {
-            Tile::Traversible | Tile::Traversed => {
+            Tile::Traversible
+            | Tile::Traversed
+            | Tile::GuardDirectionUp
+            | Tile::GuardDirectionRight
+            | Tile::GuardDirectionDown
+            | Tile::GuardDirectionLeft => {
                 self.guard_walk_forward(next_point);
                 GuardProgress::Incomplete
             }
@@ -183,7 +189,17 @@ impl Board {
         self.tiles
             .iter()
             .flatten()
-            .filter(|&p| *p == Tile::Traversed)
+            // .filter(|&p| *p == Tile::Traversed)
+            .filter(|&p| {
+                matches!(
+                    *p,
+                    Tile::Traversed
+                        | Tile::GuardDirectionUp
+                        | Tile::GuardDirectionRight
+                        | Tile::GuardDirectionDown
+                        | Tile::GuardDirectionLeft,
+                )
+            })
             .count()
     }
 
@@ -192,7 +208,6 @@ impl Board {
             .lines()
             .map(|line| {
                 line.chars()
-                    .into_iter()
                     .map(|c: char| match c {
                         '.' => Tile::Traversible,
                         '#' => Tile::Obstruction,
@@ -210,9 +225,32 @@ impl Board {
         if tiles.iter().flatten().any(|&x| x == Tile::Invalid) {
             return Err(BoardError::FailedParse);
         }
+
+        let y_pos: usize;
+        let x_pos: usize;
+
+        let mut guard_position: Point = Point { x: 0, y: 0 };
+
+        for (y, y_val) in tiles.iter().enumerate() {
+            for (x, x_val) in y_val.iter().enumerate() {
+                match tiles[y][x] {
+                    Tile::GuardDirectionUp
+                    | Tile::GuardDirectionRight
+                    | Tile::GuardDirectionDown
+                    | Tile::GuardDirectionLeft => {
+                        guard_position = Point {
+                            x: x as i32,
+                            y: y as i32,
+                        }
+                    }
+                    _ => continue,
+                }
+            }
+        }
+
         Ok(Board {
-            tiles: tiles,
-            guard_position: Point { x: 0, y: 0 },
+            tiles,
+            guard_position,
             guard_direction: GuardDirection::Up,
         })
     }
@@ -231,18 +269,23 @@ impl Board {
 }
 
 fn part_1_main(input: &str) -> Option<usize> {
-    println!("{}", input);
+    // println!("{}", input);
     let mut board: Board = Board::new(input).expect("board parsing");
     let mut guard_progress: GuardProgress = GuardProgress::Incomplete;
     let mut iteration: usize = 0;
     while guard_progress != GuardProgress::Complete {
-        board.display_tiles(iteration);
-        board.guard_progress();
-        thread::sleep(Duration::from_secs(1));
+        // board.display_tiles(iteration);
+        guard_progress = board.guard_progress();
+        // board.display_tiles(iteration + 1);
+        // thread::sleep(Duration::from_secs(2));
         iteration += 1;
     }
     Some(board.distinct_traversed_tiles())
 }
 fn main() {
     println!("PART_1_TEST: {:?}", part_1_main(TEST_INPUT).unwrap());
+    println!(
+        "PART_1: {:?}",
+        part_1_main(&read_to_string("./src/input.txt").unwrap()).unwrap()
+    );
 }
